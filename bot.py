@@ -17,6 +17,7 @@ def download_mp3(message):
         'format': 'bestaudio/best',
         'noplaylist': True,
         'outtmpl': 'song.%(ext)s',
+        'cookiefile': 'youtube.com_cookies.txt',  # اضافه شده
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
