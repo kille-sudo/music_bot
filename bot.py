@@ -1,12 +1,46 @@
 import telebot
-import yt_dlp
-import os
+import requests
+import json
 
 TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
 bot = telebot.TeleBot(TOKEN)
 
 # ذخیره لیست نتایج هر کاربر
 user_results = {}
+
+# سایت‌های مختلف برای جستجو
+def search_music(query):
+    results = []
+    
+    # جستجو در سایت‌های ایرانی
+    # جستجو در RadioJavan
+    try:
+        radiojavan_url = f"https://www.radiojavan.com/api/v1/search?query={query}&type=track"
+        response = requests.get(radiojavan_url)
+        data = response.json()
+        results.extend(data['data']['tracks'])  # نتایج موسیقی از RadioJavan
+    except Exception as e:
+        print(f"خطا در جستجو در RadioJavan: {e}")
+    
+    # جستجو در SoundCloud
+    try:
+        soundcloud_url = f"https://api.soundcloud.com/tracks?client_id=YOUR_SOUNDCLOUD_CLIENT_ID&q={query}"
+        response = requests.get(soundcloud_url)
+        soundcloud_data = response.json()
+        results.extend(soundcloud_data)  # نتایج موسیقی از SoundCloud
+    except Exception as e:
+        print(f"خطا در جستجو در SoundCloud: {e}")
+    
+    # جستجو در Jamendo
+    try:
+        jamendo_url = f"https://api.jamendo.com/v3.0/tracks/?client_id=YOUR_JAMENDO_CLIENT_ID&search={query}"
+        response = requests.get(jamendo_url)
+        jamendo_data = response.json()
+        results.extend(jamendo_data['results'])  # نتایج موسیقی از Jamendo
+    except Exception as e:
+        print(f"خطا در جستجو در Jamendo: {e}")
+    
+    return results
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
@@ -22,57 +56,28 @@ def handle_message(message):
         index = int(text) - 1
         results = user_results[chat_id]
         if 0 <= index < len(results):
-            video = results[index]
-            title = video.get('title').replace('/', '_').replace('\\', '_')
-            url = video.get('webpage_url')
-            filename = f"{title}.mp3"
-
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': filename.replace('.mp3', '.%(ext)s'),
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-                'quiet': True,
-            }
-
-            bot.send_message(chat_id, f"در حال دانلود: {title}")
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
-
-                if os.path.exists(filename):
-                    with open(filename, 'rb') as audio:
-                        bot.send_audio(chat_id, audio, title=title)
-                    os.remove(filename)
-                else:
-                    bot.send_message(chat_id, "دانلود انجام نشد.")
-            except Exception as e:
-                bot.send_message(chat_id, f"خطا در دانلود: {e}")
+            track = results[index]
+            title = track.get('title')
+            url = track.get('url')
+            
+            bot.send_message(chat_id, f"آهنگ مورد نظر: {title}\nلینک: {url}")
         else:
             bot.send_message(chat_id, "شماره وارد شده معتبر نیست.")
     else:
         # جستجو برای آهنگ‌ها
-        query = f"ytsearch5:{text}"
-        ydl_opts = {'quiet': True, 'skip_download': True}
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(query, download=False)
-                results = info.get('entries', [])
-                if not results:
-                    bot.send_message(chat_id, "هیچ آهنگی پیدا نشد.")
-                    return
+        query = text
+        results = search_music(query)
 
-                user_results[chat_id] = results  # ذخیره نتایج برای انتخاب بعدی
+        if not results:
+            bot.send_message(chat_id, "هیچ آهنگی پیدا نشد.")
+            return
 
-                response = "۵ آهنگ پیشنهادی:\n"
-                for i, entry in enumerate(results, 1):
-                    response += f"{i}. {entry.get('title')}\n"
-                response += "\nشماره آهنگ مورد نظر رو بفرست تا دانلود شه."
-                bot.send_message(chat_id, response)
-        except Exception as e:
-            bot.send_message(chat_id, f"خطا در جستجو: {e}")
+        user_results[chat_id] = results  # ذخیره نتایج برای انتخاب بعدی
+
+        response_text = "۵ آهنگ پیشنهادی:\n"
+        for i, track in enumerate(results[:5], 1):
+            response_text += f"{i}. {track.get('title')}\n"
+        response_text += "\nشماره آهنگ مورد نظر رو بفرست تا لینک رو دریافت کنی."
+        bot.send_message(chat_id, response_text)
 
 bot.infinity_polling()
