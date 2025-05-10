@@ -1,146 +1,92 @@
 import telebot
-from telebot import types
-import yt_dlp
-import os
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import quote_plus
 
-TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
+# توکن بات تلگرام خود رو وارد کنید
+TOKEN = 'توکن بات شما'
 bot = telebot.TeleBot(TOKEN)
 
-# ذخیره لیست نتایج هر کاربر
-user_results = {}
+# تابع برای جستجو و دانلود آهنگ از سایت ایرانی
+def search_song_on_irani_site(query):
+    # استفاده از quote_plus برای کدگذاری مناسب فارسی در URL
+    encoded_query = quote_plus(query)  
+    search_url = f"https://www.pop-music.ir/?s={encoded_query}"  # تغییر URL به سایت مورد نظر
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
+    try:
+        response = requests.get(search_url, headers=headers)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        song_links = soup.find_all('a', class_='song-title')  # پیدا کردن لینک‌های آهنگ
+
+        songs = []
+        for link in song_links:
+            song_title = link.get_text()
+            song_url = link.get('href')
+            songs.append((song_title, song_url))
+
+        return songs
+    except Exception as e:
+        print(f"Error during search: {e}")
+        return []
+
+# دکمه‌ها و پیام خوش‌آمدگویی
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    item_search_artist = types.KeyboardButton("جستجوی خواننده")
-    item_search_song = types.KeyboardButton("جستجوی آهنگ")
-    markup.add(item_search_artist, item_search_song)
-    bot.send_message(message.chat.id, "سلام! از اینجا انتخاب کن که بخواهی خواننده یا آهنگ رو جستجو کنی.", reply_markup=markup)
+    markup = telebot.types.ReplyKeyboardMarkup(row_width=2)
+    btn1 = telebot.types.KeyboardButton("جستجو آهنگ")
+    markup.add(btn1)
+    bot.send_message(message.chat.id, "سلام! برای جستجوی آهنگ، دکمه 'جستجو آهنگ' رو فشار بده.", reply_markup=markup)
 
-@bot.message_handler(func=lambda message: message.text == "جستجوی خواننده")
-def search_by_artist(message):
-    bot.send_message(message.chat.id, "اسم خواننده رو وارد کن:")
-    bot.register_next_step_handler(message, search_artist)
+# وقتی کاربر دکمه "جستجو آهنگ" رو می‌زنه
+@bot.message_handler(func=lambda message: message.text == "جستجو آهنگ")
+def ask_for_song_name(message):
+    bot.send_message(message.chat.id, "اسم آهنگ یا خواننده رو وارد کن تا جستجو کنم.")
 
-@bot.message_handler(func=lambda message: message.text == "جستجوی آهنگ")
-def search_by_song(message):
-    bot.send_message(message.chat.id, "اسم آهنگ رو وارد کن:")
-    bot.register_next_step_handler(message, search_song)
-
-def search_artist(message):
-    artist = message.text.strip()
+# جستجو و نمایش نتایج جستجو
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
     chat_id = message.chat.id
+    query = message.text.strip()
 
-    # پیامی که نشان دهد ربات در حال جستجو است
-    bot.send_message(chat_id, "در حال جستجو... لطفاً صبور باشید.")
+    bot.send_message(chat_id, "در حال جستجو، لطفاً صبر کنید...")
 
-    # جستجو برای آهنگ‌های خواننده
-    query = f"ytsearch5:{artist} music"
-    ydl_opts = {'quiet': True, 'skip_download': True}
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(query, download=False)
-            results = info.get('entries', [])
-            if not results:
-                bot.send_message(chat_id, "هیچ آهنگی پیدا نشد.")
-                return
+    # جستجو در سایت ایرانی
+    songs = search_song_on_irani_site(query)
 
-            user_results[chat_id] = results  # ذخیره نتایج برای انتخاب بعدی
+    if not songs:
+        bot.send_message(chat_id, "هیچ آهنگی پیدا نشد.")
+        return
 
-            # ارسال دکمه‌ها برای انتخاب آهنگ
-            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            for i, entry in enumerate(results[:5], 1):  # نمایش 5 آهنگ اول
-                item = types.KeyboardButton(f"{i}. {entry.get('title')}")
-                markup.add(item)
-            item_back = types.KeyboardButton("بازگشت")
-            markup.add(item_back)
+    # نمایش لیست آهنگ‌ها
+    response = "آهنگ‌های پیدا شده:\n"
+    for i, song in enumerate(songs, 1):
+        response += f"{i}. {song[0]}\n"
+    response += "\nشماره آهنگ مورد نظر رو بفرست تا دانلود بشه."
 
-            bot.send_message(chat_id, f"آهنگ‌های {artist}:\nانتخاب کنید:", reply_markup=markup)
-    except Exception as e:
-        bot.send_message(chat_id, f"خطا در جستجو: {e}")
+    bot.send_message(chat_id, response)
 
-def search_song(message):
-    song = message.text.strip()
-    chat_id = message.chat.id
-
-    # پیامی که نشان دهد ربات در حال جستجو است
-    bot.send_message(chat_id, "در حال جستجو... لطفاً صبور باشید.")
-
-    # جستجو برای آهنگ
-    query = f"ytsearch5:{song} music"
-    ydl_opts = {'quiet': True, 'skip_download': True}
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(query, download=False)
-            results = info.get('entries', [])
-            if not results:
-                bot.send_message(chat_id, "هیچ آهنگی پیدا نشد.")
-                return
-
-            user_results[chat_id] = results  # ذخیره نتایج برای انتخاب بعدی
-
-            # ارسال دکمه‌ها برای انتخاب آهنگ
-            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            for i, entry in enumerate(results[:5], 1):  # نمایش 5 آهنگ اول
-                item = types.KeyboardButton(f"{i}. {entry.get('title')}")
-                markup.add(item)
-            item_back = types.KeyboardButton("بازگشت")
-            markup.add(item_back)
-
-            bot.send_message(chat_id, f"آهنگ‌های مرتبط با '{song}':\nانتخاب کنید:", reply_markup=markup)
-    except Exception as e:
-        bot.send_message(chat_id, f"خطا در جستجو: {e}")
-
+# وقتی کاربر شماره آهنگ رو می‌فرسته
 @bot.message_handler(func=lambda message: message.text.isdigit())
-def download_song(message):
+def handle_song_selection(message):
     chat_id = message.chat.id
-    text = message.text.strip()
+    index = int(message.text) - 1
 
-    # اگر عدد فرستاده بود یعنی انتخاب آهنگه
-    if chat_id in user_results:
-        index = int(text) - 1
-        results = user_results[chat_id]
-        if 0 <= index < len(results):
-            video = results[index]
-            title = video.get('title').replace('/', '_').replace('\\', '_')
-            url = video.get('webpage_url')
-            filename = f"{title}.mp3"
+    # جستجو دوباره برای دریافت لینک آهنگ
+    query = message.text.strip()
+    songs = search_song_on_irani_site(query)
 
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': filename.replace('.mp3', '.%(ext)s'),
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-                'quiet': True,
-                'cookies':'all_cookies.txt',
-            }
+    if 0 <= index < len(songs):
+        song = songs[index]
+        song_url = song[1]
+        bot.send_message(chat_id, f"در حال دانلود: {song[0]}")
+        
+        # ارسال لینک دانلود
+        bot.send_message(chat_id, f"لینک آهنگ: {song_url}")
 
-            bot.send_message(chat_id, f"در حال دانلود: {title}")
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
-
-                if os.path.exists(filename):
-                    with open(filename, 'rb') as audio:
-                        bot.send_audio(chat_id, audio, title=title)
-                    os.remove(filename)
-                else:
-                    bot.send_message(chat_id, "دانلود انجام نشد.")
-            except Exception as e:
-                bot.send_message(chat_id, f"خطا در دانلود: {e}")
-        else:
-            bot.send_message(chat_id, "شماره وارد شده معتبر نیست.")
     else:
-        bot.send_message(chat_id, "لطفاً ابتدا جستجو کنید.")
-
-@bot.message_handler(func=lambda message: message.text == "بازگشت")
-def go_back(message):
-    # اگر کاربر دکمه "بازگشت" را بزند
-    welcome(message)
+        bot.send_message(chat_id, "شماره وارد شده صحیح نیست.")
 
 bot.infinity_polling()
