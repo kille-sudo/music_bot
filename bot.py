@@ -1,49 +1,50 @@
 import telebot
 import yt_dlp
 import os
+from youtubesearchpython import VideosSearch
 
 TOKEN = '7909038781:AAHpi139qdAatRgj0OvQVmIDjDsHhCcuhW8'
+
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "سلام! اسم آهنگ یا لینک یوتیوب رو بفرست تا بگردم برات بیارم.")
+def welcome(message):
+    bot.send_message(message.chat.id, "سلام! اسم آهنگ رو بفرست تا از یوتیوب برات MP3 بفرستم.")
 
 @bot.message_handler(func=lambda message: True)
-def download_audio(message):
-    query = message.text.strip()
+def get_audio(message):
+    query = message.text
+    bot.send_message(message.chat.id, f"در حال جستجوی: {query}")
 
-    if query.startswith("http"):
-        url = query
-    else:
-        url = f"ytsearch:{query}"
+    videosSearch = VideosSearch(query, limit=1)
+    results = videosSearch.result()
+    if not results['result']:
+        bot.send_message(message.chat.id, "آهنگی پیدا نشد.")
+        return
 
-    bot.reply_to(message, "در حال جستجو، لطفاً صبر کن...")
+    video_url = results['result'][0]['link']
+    title = results['result'][0]['title']
+    bot.send_message(message.chat.id, f"دانلود از: {title}")
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': 'song.%(ext)s',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+        'quiet': True
+    }
 
     try:
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': 'song.%(ext)s',
-            'noplaylist': True,
-            'quiet': True,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-        }
-
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            filename = filename.rsplit('.', 1)[0] + '.mp3'
-
-        with open(filename, 'rb') as audio:
-            bot.send_audio(message.chat.id, audio)
-
-        os.remove(filename)
-
+            ydl.download([video_url])
+        audio = open('song.mp3', 'rb')
+        bot.send_audio(message.chat.id, audio)
+        audio.close()
+        os.remove("song.mp3")
     except Exception as e:
-        bot.send_message(message.chat.id, f"خطا پیش اومد: {e}")
+        bot.send_message(message.chat.id, f"خطا در دانلود: {e}")
 
 bot.infinity_polling()
