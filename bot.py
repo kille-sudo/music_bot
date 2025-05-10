@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 
 # توکن بات تلگرام خود رو وارد کنید
-TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
+TOKEN = 'توکن بات شما'
 bot = telebot.TeleBot(TOKEN)
 
 # تابع برای جستجو و دانلود آهنگ از سایت ایرانی
@@ -76,6 +76,8 @@ def handle_song_selection(message):
 
     # جستجو دوباره برای دریافت لینک آهنگ
     query = message.text.strip()
+
+    # استفاده از نتایج جستجو ذخیره شده
     songs = search_song_on_irani_site(query)
 
     if 0 <= index < len(songs):
@@ -85,7 +87,6 @@ def handle_song_selection(message):
         
         # ارسال لینک دانلود
         bot.send_message(chat_id, f"لینک آهنگ: {song_url}")
-
     else:
         bot.send_message(chat_id, "شماره وارد شده صحیح نیست.")
 
