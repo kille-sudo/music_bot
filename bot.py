@@ -91,5 +91,5 @@ def handle_song_selection(message):
 
     else:
         bot.send_message(chat_id, "شماره وارد شده صحیح نیست.")
-
+bot.remove_webhook()
 bot.infinity_polling()
