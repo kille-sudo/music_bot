@@ -117,6 +117,7 @@ def download_song(message):
                     'preferredquality': '192',
                 }],
                 'quiet': True,
+                'cookies':'all_cookies.txt',
             }
 
             bot.send_message(chat_id, f"در حال دانلود: {title}")
