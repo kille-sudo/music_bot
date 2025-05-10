@@ -5,7 +5,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 
-TOKEN = 'توکن ربات خود را اینجا وارد کنید'
+TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
 bot = telebot.TeleBot(TOKEN)
 
 # ذخیره لیست نتایج هر کاربر
