@@ -80,4 +80,5 @@ def handle_message(message):
         response_text += "\nشماره آهنگ مورد نظر رو بفرست تا لینک رو دریافت کنی."
         bot.send_message(chat_id, response_text)
 
+bot.remove_webhook()
 bot.infinity_polling()
