@@ -36,7 +36,7 @@ def handle_message(message):
                     'preferredquality': '192',
                 }],
                 'quiet': True,
-                'cookies': 'all_cookies',  # استفاده از کوکی‌ها
+                'cookies': 'all_cookies':'C:\Users\FAnoos\Downloads/all_cookies',
             }
 
             bot.send_message(chat_id, f"در حال دانلود: {title}")
