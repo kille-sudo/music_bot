@@ -7,28 +7,28 @@ from urllib.parse import quote_plus
 TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
 bot = telebot.TeleBot(TOKEN)
 
-# تابع برای جستجو و دانلود آهنگ از SoundCloud
-def search_song_on_soundcloud(query):
+# تابع برای جستجو و دانلود آهنگ از سایت behtamusic.ir
+def search_song_on_behtamusic(query):
     # استفاده از quote_plus برای کدگذاری مناسب فارسی در URL
-    encoded_query = quote_plus(query)
-    search_url = f"https://soundcloud.com/search?q={encoded_query}"  # استفاده از SoundCloud برای جستجو
-
+    encoded_query = quote_plus(query)  
+    search_url = f"https://behtamusic.ir/?s={encoded_query}"  # سایت behtamusic.ir
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
     try:
         response = requests.get(search_url, headers=headers)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # چاپ محتویات صفحه برای دیباگ
+        print(response.text)  # نمایش HTML
 
-        # پیدا کردن لینک‌های آهنگ
-        song_links = soup.find_all('a', {'class': 'sc-link-primary'}) 
+        soup = BeautifulSoup(response.text, 'html.parser')
+        song_links = soup.find_all('a', class_='entry-title')  # باید کلاس صحیح را از HTML پیدا کنید
 
         songs = []
         for link in song_links:
             song_title = link.get_text()
             song_url = link.get('href')
-            songs.append((song_title, f"https://soundcloud.com{song_url}"))
+            songs.append((song_title, song_url))
 
         return songs
     except Exception as e:
@@ -56,8 +56,8 @@ def handle_message(message):
 
     bot.send_message(chat_id, "در حال جستجو، لطفاً صبر کنید...")
 
-    # جستجو در SoundCloud
-    songs = search_song_on_soundcloud(query)
+    # جستجو در سایت behtamusic.ir
+    songs = search_song_on_behtamusic(query)
 
     if not songs:
         bot.send_message(chat_id, "هیچ آهنگی پیدا نشد.")
@@ -79,7 +79,7 @@ def handle_song_selection(message):
 
     # جستجو دوباره برای دریافت لینک آهنگ
     query = message.text.strip()
-    songs = search_song_on_soundcloud(query)
+    songs = search_song_on_behtamusic(query)
 
     if 0 <= index < len(songs):
         song = songs[index]
