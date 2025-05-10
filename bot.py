@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 
 # توکن بات تلگرام خود رو وارد کنید
-TOKEN = 'توکن بات شما'
+TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
 bot = telebot.TeleBot(TOKEN)
 
 # تابع برای جستجو و دانلود آهنگ از سایت ایرانی
