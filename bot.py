@@ -99,8 +99,7 @@ def download_song(message):
     text = message.text.strip()
 
     # اگر عدد فرستاده بود یعنی انتخاب آهنگه
-
-if chat_id in user_results:
+    if chat_id in user_results:
         index = int(text) - 1
         results = user_results[chat_id]
         if 0 <= index < len(results):
