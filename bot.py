@@ -100,7 +100,6 @@ def download_song(message):
 
     # اگر عدد فرستاده بود یعنی انتخاب آهنگه
 
-K_L, [10/05/2025 7:50 PM]
 if chat_id in user_results:
         index = int(text) - 1
         results = user_results[chat_id]
