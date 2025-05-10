@@ -3,15 +3,16 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 
-# توکن بات تلگرام خود رو وارد کنید
-TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
+# توکن بات تلگرام خود را وارد کنید
+TOKEN = 'توکن بات شما'
 bot = telebot.TeleBot(TOKEN)
 
-# تابع برای جستجو و دانلود آهنگ از سایت ایرانی
-def search_song_on_irani_site(query):
+# تابع برای جستجو و دانلود آهنگ از SoundCloud
+def search_song_on_soundcloud(query):
     # استفاده از quote_plus برای کدگذاری مناسب فارسی در URL
-    encoded_query = quote_plus(query)  
-    search_url = f"https://www.pop-music.ir/?s={encoded_query}"  # تغییر URL به سایت مورد نظر
+    encoded_query = quote_plus(query)
+    search_url = f"https://soundcloud.com/search?q={encoded_query}"  # استفاده از SoundCloud برای جستجو
+
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
 
     try:
@@ -19,13 +20,15 @@ def search_song_on_irani_site(query):
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, 'html.parser')
-        song_links = soup.find_all('a', class_='song-title')  # پیدا کردن لینک‌های آهنگ
+
+        # پیدا کردن لینک‌های آهنگ
+        song_links = soup.find_all('a', {'class': 'sc-link-primary'}) 
 
         songs = []
         for link in song_links:
             song_title = link.get_text()
             song_url = link.get('href')
-            songs.append((song_title, song_url))
+            songs.append((song_title, f"https://soundcloud.com{song_url}"))
 
         return songs
     except Exception as e:
@@ -53,8 +56,8 @@ def handle_message(message):
 
     bot.send_message(chat_id, "در حال جستجو، لطفاً صبر کنید...")
 
-    # جستجو در سایت ایرانی
-    songs = search_song_on_irani_site(query)
+    # جستجو در SoundCloud
+    songs = search_song_on_soundcloud(query)
 
     if not songs:
         bot.send_message(chat_id, "هیچ آهنگی پیدا نشد.")
@@ -76,9 +79,7 @@ def handle_song_selection(message):
 
     # جستجو دوباره برای دریافت لینک آهنگ
     query = message.text.strip()
-
-    # استفاده از نتایج جستجو ذخیره شده
-    songs = search_song_on_irani_site(query)
+    songs = search_song_on_soundcloud(query)
 
     if 0 <= index < len(songs):
         song = songs[index]
@@ -87,6 +88,7 @@ def handle_song_selection(message):
         
         # ارسال لینک دانلود
         bot.send_message(chat_id, f"لینک آهنگ: {song_url}")
+
     else:
         bot.send_message(chat_id, "شماره وارد شده صحیح نیست.")
 
