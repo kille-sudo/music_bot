@@ -2,7 +2,7 @@ import telebot
 import yt_dlp
 import os
 
-TOKEN = '7909038781:AAHpi139qdAatRgj0OvQVmIDjDsHhCcuhW8'
+TOKEN = '7909038781:AAHLie4sdqWGgaKxeuIYqkMnYQEiTAbsfJY'
 bot = telebot.TeleBot(TOKEN)
 
 # ذخیره لیست نتایج هر کاربر
